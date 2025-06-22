@@ -1,0 +1,3 @@
+const $ = console.log;
+
+export { $ };
