@@ -69,15 +69,18 @@ export default class ContenidoComponente extends ComponentePorDefecto {
         tituloVideoElement.innerHTML = this.titulo;
         descripcionElement.innerHTML = this.descripcion || "---";
 
-        if (this.duracion) {
-            if (this.duracion < 60) {
-                duracionElement.innerHTML = this.duracion + "s";
-                return;
-            }
+        if (!this.duracion) {
+            throw new Error("El video no puede existir sin duracion");
+        }
 
+        if (this.duracion < 60) {
+            duracionElement.innerHTML = this.duracion + "s";
+
+        } else {
             const numeroRedondeado = parseFloat((parseFloat(this.duracion) / 60).toFixed(1));
             duracionElement.innerHTML = numeroRedondeado + "m";
         }
+
 
         const article = /**@type {HTMLElement} */ (this.shadowRoot.querySelector("article"));
 
