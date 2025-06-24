@@ -68,7 +68,17 @@ export default class ContenidoComponente extends ComponentePorDefecto {
 
         tituloVideoElement.innerHTML = this.titulo;
         descripcionElement.innerHTML = this.descripcion || "---";
-        duracionElement.innerHTML = this.duracion || "0:00m";
+
+        if (this.duracion) {
+            if (this.duracion < 60) {
+                duracionElement.innerHTML = this.duracion + "s";
+                return;
+            }
+
+            const numeroRedondeado = parseFloat((parseFloat(this.duracion) / 60).toFixed(1));
+            duracionElement.innerHTML = numeroRedondeado + "m";
+        }
+
         const article = /**@type {HTMLElement} */ (this.shadowRoot.querySelector("article"));
 
         const archivoSeleccionable = /**@type {HTMLElement} */ (this.shadowRoot.querySelector("#archivoSeleccionable"));

@@ -118,6 +118,9 @@ export default class UsuarioComponente extends ComponentePorDefecto {
             const barraDePorcentaje = /**@type {SVGRectElement} */ (shadow.querySelector("#barraDePorcentaje"));
             this.barraDePorcentaje = barraDePorcentaje;
 
+            const fileInput = this.shadow.querySelector("#archivo");
+            fileInput.addEventListener("input", this._onFileInput.bind(this));
+
         }
 
         shadow.querySelector("#dropzone")?.addEventListener("dragover", (e) => this._onDragOver(e));
@@ -135,7 +138,7 @@ export default class UsuarioComponente extends ComponentePorDefecto {
         });
     }
 
-    _onDrop(event) {
+   async  _onDrop(event) {
         this._onDragLeave(event);
         const files = event.dataTransfer.files;
         const arrayArchivos = Array.from(files);
@@ -165,6 +168,17 @@ export default class UsuarioComponente extends ComponentePorDefecto {
         // y ponemos el nombre del archivo en la dropzone
         const dropzone = /**@type {HTMLDivElement} */(this.shadow.querySelector("#dropzone"));
         dropzone.textContent = file.name;
+
+        const segundos = await this.obtenerDuracionEnSegundosDelArchivo(file);
+
+        if (segundos < 60) {
+            this.shadowRoot.querySelector("#mockDuracion").value = `${Math.trunc(segundos)}s`;
+        } else {
+            const numeroRedondeado = parseFloat((segundos / 60).toFixed(1))
+            this.shadowRoot.querySelector("#mockDuracion").value = `${numeroRedondeado}m`;
+        }
+
+        this.shadow.querySelector("#duracion").value = segundos;
 
     }
 
@@ -197,8 +211,8 @@ export default class UsuarioComponente extends ComponentePorDefecto {
         formElement.querySelector("#archivo").style.display = "block";
         formElement.querySelector("#archivo").required = true;
 
-
         const dropzone = /**@type {HTMLDivElement} */(this.shadow.querySelector("#dropzone"));
+        this.shadow.querySelector("#dropzone").style.display = "flex";
 
         dropzone.innerHTML = /*html*/`
         <p>
@@ -207,6 +221,27 @@ export default class UsuarioComponente extends ComponentePorDefecto {
         </p>`
 
         this.archivoSeleccionado = null;
+    }
+
+    async _onFileInput(evt) {
+        const file = evt.target.files[0];
+        if (!file) { throw new Error("No se que paso al intentar subir el archivo!!!"); }
+
+        this.archivoSeleccionado = file;
+        const duracion = await this.obtenerDuracionEnSegundosDelArchivo(file);
+        const inputDuracion = this.shadow.querySelector("#duracion")
+        inputDuracion.value = parseInt(duracion);
+
+        const inputMockDuracion = this.shadow.querySelector("#mockDuracion");
+
+        this.shadow.querySelector("#dropzone").style.display = "none";
+
+        if (duracion < 60) {
+            inputMockDuracion.value = parseInt(duracion) + "s";
+            return;
+        }
+
+        inputMockDuracion.value = (duracion/60).toFixed(1) + "m"
     }
 
     _onFormSubmit(e) {
@@ -226,7 +261,7 @@ export default class UsuarioComponente extends ComponentePorDefecto {
         const obj = {
             titulo: titulo,
             descripcion: descripcion,
-            duracion: duracion,
+            duracion: parseInt(duracion), //para enviar ejemp 125 y no 125.2
             file: formData.get("file")
         }
 
@@ -331,6 +366,25 @@ export default class UsuarioComponente extends ComponentePorDefecto {
         this.pagina++;
     }
 
+    async obtenerDuracionEnSegundosDelArchivo(file) {
+        if (!file) { throw new Error("Se envio un archivo nulo o vacio") }
+
+        //creamos un elemento de video
+        const videoElement = document.createElement("video");
+        videoElement.preload = "metadata";
+
+        const promise = new Promise(resolve => {
+            videoElement.addEventListener("loadeddata", () => {
+                URL.revokeObjectURL(videoElement.src);
+                const duration = videoElement.duration;
+                resolve(duration)
+            })
+        });
+
+        videoElement.src = URL.createObjectURL(file);
+        return await promise;
+    }
+
     /**@private */
     _html = /*html*/`
     <div id="body">
@@ -359,7 +413,8 @@ export default class UsuarioComponente extends ComponentePorDefecto {
                 <form id="formAgregarVideo">
                     <input required type="text" placeholder="Titulo" name="titulo">
                     <textarea required id="descripcionVideo" placeholder="Descripción del video" name="descripcion"></textarea>
-                    <input required type="number" placeholder="Duración en segundos" pattern="[0-9]" name="duracion">
+                    <input type="string" id="mockDuracion" placeholder="Duración del archivo" disabled name="duracionMinutos">
+                    <input type="hidden" name="duracion" id="duracion">
                     <input required type="file" name="file" id="archivo" accept="audio/*,video/*" name="file">
                     <div id="dropzone">
                         <p>
