@@ -13,6 +13,13 @@ class SubirArchivoWorker {
         this.apiUrl = Ambiente.obtenerInstancia().variables.url;
     }
 
+    _onError() {
+        postMessage({
+            type: "error",
+            message: "hubo un error al intentar subir el archivo"
+        });
+    }
+
     /**
      * 
      * @param { { data: { file: File, titulo: string, descripcion: string, duracion: string }} } e 
@@ -33,6 +40,7 @@ class SubirArchivoWorker {
         xhr.withCredentials = true;
         xhr.open("POST", `${this.apiUrl}archivo/subir`, true);
         xhr.upload.onprogress = e => { this.enviarMensaje(e); }
+        xhr.upload.addEventListener("error", this._onError.bind(this));
         xhr.send(formData);
     }
 

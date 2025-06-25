@@ -272,13 +272,22 @@ export default class UsuarioComponente extends ComponentePorDefecto {
         this.servicioArchivo?.subirArchivo(obj, (e) => { this.mostrarPorcentaje(e) });
     }
 
-    mostrarPorcentaje(datos) {
-        console.log(datos);
+    async mostrarPorcentaje(datos) {
         this.barraDePorcentaje.setAttribute("width", `${datos.actual / datos.total * 100}%`);
+
+        if (datos.type) {
+            alert(datos.message || "Hubo un error al subir el video");
+            window.location.reload();
+            return;
+        }
 
         if (datos.envioCompleto) {
             this.cerrarDialogo();
-            this._cargarContenido();
+            alert("El video se subio con exito!");
+            //lo reiniciamos para que se vuelan a buscar los archivos sin tener que reiniciar la pagina
+            this.pagina = 1;
+            this.cantidad = 10;
+            this.shadowRoot.querySelector("#contenido").innerHTML = "";
         }
 
     }

@@ -49,6 +49,10 @@ export default class LoginServicio {
                 }
             };
 
+            xhr.addEventListener("error", () => {
+                reject(new Error("No se pudo iniciar la sesion"));
+            });
+
             xhr.send(JSON.stringify({ usuario: usuario, contrasenia: contrasenia }));
         });
 

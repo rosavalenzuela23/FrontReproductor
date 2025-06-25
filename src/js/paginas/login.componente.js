@@ -81,13 +81,20 @@ export default class LoginComponente extends ComponentePorDefecto {
         if (usuario === null || contrasenia === null) { throw new Error("") }
 
         try {
+            this.cambiarEstadoBotonLogin();
             await this.servicioLogin?.iniciarSesion(usuario, contrasenia);
             Enrutador.obtenerInstancia().push("/");
         } catch (e) {
-            this.servicioMensajeria?.mostrarMensajeDeError("Credenciales invalidas");
+            this.servicioMensajeria?.mostrarMensajeDeError(e.message || "Hubo un error al iniciar sesion");
+        } finally {
+            this.cambiarEstadoBotonLogin();
         }
     }
 
+    cambiarEstadoBotonLogin() {
+        const botonLogin = this.shadowRoot.querySelector("#botonLogin");
+        botonLogin.disabled = !botonLogin.disabled;
+    }
 
 
     /**@type {ShadowRoot | undefined} */
