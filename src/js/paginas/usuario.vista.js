@@ -101,26 +101,8 @@ export default class UsuarioComponente extends ComponentePorDefecto {
             botonAgregarVideo.addEventListener("click", () => this._onBotonAgregarVideoPressed());
             botonAgregarVideo.id = "botonAgregarVideo";
             botonAgregarVideo.textContent = "➕ Agregar Video";
-
-            const botonCancelar = /**@type {HTMLButtonElement} */(shadow.querySelector("#botonCancelar"));
-            botonCancelar.addEventListener("click", () => this.cerrarDialogo());
-            const botonCerrar = shadow.querySelector("#botonCerrarDialogo");
-            botonCerrar?.addEventListener("click", () => this.cerrarDialogo());
             shadow.querySelector("#divBotonAgregarVideo")?.appendChild(botonAgregarVideo);
-
-            const formulario = shadow.querySelector("#formAgregarVideo");
-
-            formulario?.addEventListener("submit", (e) => {
-                e.preventDefault();
-                this._onFormSubmit(e);
-            })
-
-            const barraDePorcentaje = /**@type {SVGRectElement} */ (shadow.querySelector("#barraDePorcentaje"));
-            this.barraDePorcentaje = barraDePorcentaje;
-
-            const fileInput = this.shadow.querySelector("#archivo");
-            fileInput.addEventListener("input", this._onFileInput.bind(this));
-
+            this.configurarFormularioUsuario();
         }
 
         shadow.querySelector("#dropzone")?.addEventListener("dragover", (e) => this._onDragOver(e));
@@ -138,7 +120,7 @@ export default class UsuarioComponente extends ComponentePorDefecto {
         });
     }
 
-   async  _onDrop(event) {
+    async _onDrop(event) {
         this._onDragLeave(event);
         const files = event.dataTransfer.files;
         const arrayArchivos = Array.from(files);
@@ -214,6 +196,9 @@ export default class UsuarioComponente extends ComponentePorDefecto {
         const dropzone = /**@type {HTMLDivElement} */(this.shadow.querySelector("#dropzone"));
         this.shadow.querySelector("#dropzone").style.display = "flex";
 
+        const svg = this.shadow.querySelector("#porcentajeSubida");
+        svg?.setAttribute("width", "0%");
+
         dropzone.innerHTML = /*html*/`
         <p>
             Arrastre y suelte el archivo aqui
@@ -241,7 +226,7 @@ export default class UsuarioComponente extends ComponentePorDefecto {
             return;
         }
 
-        inputMockDuracion.value = (duracion/60).toFixed(1) + "m"
+        inputMockDuracion.value = (duracion / 60).toFixed(1) + "m"
     }
 
     _onFormSubmit(e) {
@@ -272,18 +257,76 @@ export default class UsuarioComponente extends ComponentePorDefecto {
         this.servicioArchivo?.subirArchivo(obj, (e) => { this.mostrarPorcentaje(e) });
     }
 
+    mostrarSVGDeExito() {
+        const formulario = this.shadow.querySelector("#formAgregarVideo");
+        formulario.innerHTML = this.svgCheck;
+        formulario.style.display = "flex";
+        formulario.style.justifyContent = "center";
+        formulario.style.alignItems = "center";
+    }
+
+    mostrarSVGDeError() {
+        const formulario = this.shadow.querySelector("#formAgregarVideo");
+        formulario.innerHTML = this.svgCross;
+        formulario.style.display = "flex";
+        formulario.style.justifyContent = "center";
+        formulario.style.alignItems = "center";
+    }
+
+    configurarFormularioUsuario() {
+        const shadow = this.shadowRoot;
+        const formulario = shadow.querySelector("#formAgregarVideo");
+
+        formulario.innerHTML = /*html*/`
+            <input required type="text" placeholder="Titulo" name="titulo">
+            <textarea required id="descripcionVideo" placeholder="Descripción del video" name="descripcion"></textarea>
+            <input type="string" id="mockDuracion" placeholder="Duración del archivo" disabled name="duracionMinutos">
+            <input type="hidden" name="duracion" id="duracion">
+            <input required type="file" name="file" id="archivo" accept="audio/*,video/*" name="file">
+            <div id="dropzone">
+                <p>
+                    Arrastre y suelte el archivo aqui
+                    <img src="/drag.svg" height="25rem" width="25rem">
+                </p>
+            </div>
+        `
+
+        formulario.style.display = "block";
+
+        formulario?.addEventListener("submit", (e) => {
+            e.preventDefault();
+            this._onFormSubmit(e);
+        });
+
+        const botonCancelar = /**@type {HTMLButtonElement} */(shadow.querySelector("#botonCancelar"));
+        botonCancelar.addEventListener("click", () => this.cerrarDialogo());
+        const botonCerrar = shadow.querySelector("#botonCerrarDialogo");
+        botonCerrar?.addEventListener("click", () => this.cerrarDialogo());
+
+        const barraDePorcentaje = /**@type {SVGRectElement} */ (shadow.querySelector("#barraDePorcentaje"));
+        this.barraDePorcentaje = barraDePorcentaje;
+
+        const fileInput = this.shadow.querySelector("#archivo");
+        console.log(formulario)
+        fileInput?.addEventListener("input", this._onFileInput.bind(this));
+    }
+
     async mostrarPorcentaje(datos) {
         this.barraDePorcentaje.setAttribute("width", `${datos.actual / datos.total * 100}%`);
 
         if (datos.type) {
+            this.mostrarSVGDeError();
+            await this.timer(200);
             alert(datos.message || "Hubo un error al subir el video");
             window.location.reload();
             return;
         }
 
         if (datos.envioCompleto) {
-            this.cerrarDialogo();
+            this.mostrarSVGDeExito();
+            await this.timer(200); // para que se pueda mostrar el svg
             alert("El video se subio con exito!");
+            this.cerrarDialogo();
             //lo reiniciamos para que se vuelan a buscar los archivos sin tener que reiniciar la pagina
             this.pagina = 1;
             this.cantidad = 10;
@@ -292,10 +335,15 @@ export default class UsuarioComponente extends ComponentePorDefecto {
 
     }
 
+    async timer(ms) {
+        await new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     cerrarDialogo() {
         const dialogElement = /**@type {HTMLDialogElement} */ (this.shadow.querySelector("#dialogoAgregarVideo"));
-        this._reiniciarFormulario();
         dialogElement.close();
+        this.configurarFormularioUsuario();
+        this._reiniciarFormulario();
     }
 
     async onBuscarPorQuery(e) {
@@ -415,22 +463,12 @@ export default class UsuarioComponente extends ComponentePorDefecto {
                     </p>
                 </header>
                 <p>
-                    <svg width="100%" height="20px">
+                    <svg width="100%" height="20px" id="porcentajeSubida">
                         <rect x="0" y="0" width="0%" height="20px" rx="5px" ry="5px" fill="blue" id="barraDePorcentaje"/>
                     </svg>
                 </p>
                 <form id="formAgregarVideo">
-                    <input required type="text" placeholder="Titulo" name="titulo">
-                    <textarea required id="descripcionVideo" placeholder="Descripción del video" name="descripcion"></textarea>
-                    <input type="string" id="mockDuracion" placeholder="Duración del archivo" disabled name="duracionMinutos">
-                    <input type="hidden" name="duracion" id="duracion">
-                    <input required type="file" name="file" id="archivo" accept="audio/*,video/*" name="file">
-                    <div id="dropzone">
-                        <p>
-                            Arrastre y suelte el archivo aqui
-                            <img src="/drag.svg" height="25rem" width="25rem">
-                        </p>
-                    </div>
+                    
                 </form>
                 <footer>
                     <button class="secondary" id="botonCancelar">
@@ -529,6 +567,23 @@ export default class UsuarioComponente extends ComponentePorDefecto {
 
     pagina = 1;
     cantidad = 10;
+
+    svgCross = /*html*/`
+        <svg width="20rem" height="20rem" viewBox="0 0 25 25" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketch="http://www.bohemiancoding.com/sketch/ns">
+            <title>cross</title>
+            <desc>Created with Sketch Beta.</desc>
+            <defs></defs>
+            <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage">
+            <g id="Icon-Set-Filled" sketch:type="MSLayerGroup" transform="translate(-469.000000, -1041.000000)" fill="#FF0000">
+            <path d="M487.148,1053.48 L492.813,1047.82 C494.376,1046.26 494.376,1043.72 492.813,1042.16 C491.248,1040.59 488.712,1040.59 487.148,1042.16 L481.484,1047.82 L475.82,1042.16 C474.257,1040.59 471.721,1040.59 470.156,1042.16 C468.593,1043.72 468.593,1046.26 470.156,1047.82 L475.82,1053.48 L470.156,1059.15 C468.593,1060.71 468.593,1063.25 470.156,1064.81 C471.721,1066.38 474.257,1066.38 475.82,1064.81 L481.484,1059.15 L487.148,1064.81 C488.712,1066.38 491.248,1066.38 492.813,1064.81 C494.376,1063.25 494.376,1060.71 492.813,1059.15 L487.148,1053.48" id="cross" sketch:type="MSShapeGroup"></path>
+            </g></g>
+        </svg>`
+
+    svgCheck = /*html*/`
+    <?xml version="1.0" encoding="utf-8"?><!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+    <svg fill="#000000" width="20rem" height="20rem" viewBox="0 0 24 24" id="check-mark-circle" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><rect id="secondary" x="3" y="3" width="18" height="18" rx="9" style="fill: rgb(44, 169, 188); stroke-width: 2;"></rect><polyline id="primary" points="8 11.5 11 14.5 16 9.5" style="fill: none; stroke: rgb(0, 0, 0); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><rect id="primary-2" data-name="primary" x="3" y="3" width="18" height="18" rx="9" style="fill: none; stroke: rgb(0, 0, 0); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></rect></svg>
+    `
+
 }
 
 customElements.define(nombreComponente, UsuarioComponente);
